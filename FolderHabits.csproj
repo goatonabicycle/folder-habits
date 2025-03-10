@@ -2,10 +2,9 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
+	<TargetFramework>net9.0-windows</TargetFramework>
+	<UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
