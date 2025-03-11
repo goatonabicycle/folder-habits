@@ -1,7 +1,12 @@
 ﻿<Window x:Class="FolderHabits.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Folder Habits" Height="450" Width="800">
+        xmlns:local="clr-namespace:FolderHabits"
+        Title="Folder Habits" Height="600" Width="900">
+    <Window.Resources>
+        <local:ActivityColorConverter x:Key="ActivityColorConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -28,50 +33,121 @@
         <!-- Action Buttons -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
             <Button Content="Add Habit" Click="AddButton_Click" Padding="10,5" Margin="0,0,10,0"/>
-            <Button Content="Refresh Counts" Click="RefreshButton_Click" Padding="10,5"/>
+            <Button Content="Refresh" Click="RefreshButton_Click" Padding="10,5"/>
         </StackPanel>
 
         <!-- Habits List -->
-        <ListView Grid.Row="2" x:Name="HabitsListView">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="Title" Width="150">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Title}" FontWeight="Bold"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="Folder Path" Width="300">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding FolderPath}" TextTrimming="CharacterEllipsis" ToolTip="{Binding FolderPath}"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="Files" Width="70">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding FileCount}" HorizontalAlignment="Center"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="Folders" Width="70">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding FolderCount}" HorizontalAlignment="Center"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="Added" Width="150">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:MMM d, yyyy HH:mm}'}" Foreground="Gray"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                </GridView>
-            </ListView.View>
-        </ListView>
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="HabitsListView">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border BorderThickness="1" BorderBrush="#DDD" CornerRadius="4" 
+                                Margin="0,0,0,10" Background="#F9F9F9">
+                            <Grid Margin="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="250"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Left Side: Basic Info -->
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+                                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,8">
+                                        <Run Text="Location: "/>
+                                        <Run Text="{Binding FolderPath}" Foreground="#555"/>
+                                    </TextBlock>
+                                    <TextBlock Margin="0,0,0,8">
+                                        <Run Text="Added: "/>
+                                        <Run Text="{Binding CreatedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Foreground="#555"/>
+                                    </TextBlock>
+
+                                    <!-- Basic Stats -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <Border Background="#E3F2FD" CornerRadius="4" Margin="0,0,8,0" Padding="8,4">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Files: " Foreground="#555"/>
+                                                <TextBlock Text="{Binding FileCount}" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Background="#E8F5E9" CornerRadius="4" Padding="8,4">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Folders: " Foreground="#555"/>
+                                                <TextBlock Text="{Binding FolderCount}" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Right Side: Activity Grid -->
+                                <Grid Grid.Column="1" Margin="20,0,0,0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Activity Header -->
+                                    <TextBlock Text="Recent Activity (Last 10 Days)" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                                    <!-- Activity Grid -->
+                                    <ItemsControl Grid.Row="1" ItemsSource="{Binding ActivityDays}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Width="60" Height="60" 
+                                                        Margin="0,0,4,0" 
+                                                        Background="{Binding HasActivity, Converter={StaticResource ActivityColorConverter}}"
+                                                        BorderThickness="1" BorderBrush="#DDD"
+                                                        CornerRadius="4">
+                                                    <Border.ToolTip>
+                                                        <TextBlock Text="{Binding Date, StringFormat='Date: {0:dd/MM/yyyy}'}" />
+                                                    </Border.ToolTip>
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Date, StringFormat='{}{0:ddd}'}" 
+                                                                   FontSize="12" HorizontalAlignment="Center" />
+                                                        <TextBlock Text="{Binding Date, StringFormat='{}{0:dd/MM}'}" 
+                                                                   FontSize="12" HorizontalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+
+                                <!-- Delete Button -->
+                                <Button Grid.Column="2" 
+                                        Content="✕" 
+                                        FontSize="14"
+                                        Foreground="#888" 
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="8,2"
+                                        VerticalAlignment="Top"
+                                        HorizontalAlignment="Right"
+                                        Tag="{Binding}"
+                                        Click="DeleteButton_Click"
+                                        ToolTip="Delete this habit">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Opacity" Value="0.5" />
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Opacity" Value="1" />
+                                                    <Setter Property="Foreground" Value="#E53935" />
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
     </Grid>
 </Window>

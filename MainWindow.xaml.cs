@@ -1,4 +1,6 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -15,12 +17,13 @@ namespace FolderHabits
         public MainWindow()
         {
             InitializeComponent();
+
             HabitsListView.ItemsSource = _habits;
             LoadHabits();
 
             _refreshTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(10)
+                Interval = TimeSpan.FromSeconds(30)
             };
             _refreshTimer.Tick += RefreshTimer_Tick;
             _refreshTimer.Start();
@@ -37,7 +40,7 @@ namespace FolderHabits
             {
                 habit.UpdateCounts();
             }
-            
+
             HabitsListView.Items.Refresh();
         }
 
@@ -90,6 +93,22 @@ namespace FolderHabits
                 if (!string.IsNullOrEmpty(folderPath))
                 {
                     FolderTextBox.Text = folderPath;
+                }
+            }
+        }
+
+        private void DeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button button && button.Tag is Habit habit)
+            {
+                if (System.Windows.MessageBox.Show(
+                    $"Are you sure you want to delete '{habit.Title}'?",
+                    "Confirm Delete",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    _habits.Remove(habit);
+                    SaveHabits();
                 }
             }
         }
