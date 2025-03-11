@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace FolderHabits
 {
@@ -11,12 +10,35 @@ namespace FolderHabits
     {
         private ObservableCollection<Habit> _habits = new ObservableCollection<Habit>();
         private const string SaveFileName = "habits.json";
+        private DispatcherTimer _refreshTimer;
 
         public MainWindow()
         {
             InitializeComponent();
             HabitsListView.ItemsSource = _habits;
             LoadHabits();
+
+            _refreshTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(10)
+            };
+            _refreshTimer.Tick += RefreshTimer_Tick;
+            _refreshTimer.Start();
+        }
+
+        private void RefreshTimer_Tick(object sender, EventArgs e)
+        {
+            RefreshAllCounts();
+        }
+
+        private void RefreshAllCounts()
+        {
+            foreach (var habit in _habits)
+            {
+                habit.UpdateCounts();
+            }
+            
+            HabitsListView.Items.Refresh();
         }
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
@@ -36,11 +58,14 @@ namespace FolderHabits
                 return;
             }
 
-            _habits.Add(new Habit
+            var habit = new Habit
             {
                 Title = title,
                 FolderPath = folderPath
-            });
+            };
+
+            habit.UpdateCounts();
+            _habits.Add(habit);
 
             TitleTextBox.Text = string.Empty;
             FolderTextBox.Text = string.Empty;
@@ -49,18 +74,18 @@ namespace FolderHabits
         }
 
         private void BrowseButton_Click(object sender, RoutedEventArgs e)
-        {          
+        {
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
                 Title = "Select Folder to Monitor",
                 CheckFileExists = false,
-                FileName = "Select Folder", // Trick to use OpenFileDialog for folders
+                FileName = "Select Folder",
                 CheckPathExists = true
             };
 
             bool? result = dialog.ShowDialog();
             if (result == true)
-            {        
+            {
                 string folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
                 if (!string.IsNullOrEmpty(folderPath))
                 {
@@ -96,6 +121,7 @@ namespace FolderHabits
                     _habits.Clear();
                     foreach (var habit in habits)
                     {
+                        habit.UpdateCounts();
                         _habits.Add(habit);
                     }
                 }
@@ -104,6 +130,11 @@ namespace FolderHabits
             {
                 System.Windows.MessageBox.Show($"Failed to load habits: {ex.Message}");
             }
+        }
+
+        private void RefreshButton_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshAllCounts();
         }
     }
 }
