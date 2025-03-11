@@ -27,19 +27,21 @@
 
         <!-- Add Button -->
         <Button Grid.Row="1" Content="Add Habit" Click="AddButton_Click" 
-                HorizontalAlignment="Left" Padding="10,5" Margin="0,0,0,10" Width="77"/>
+                HorizontalAlignment="Left" Padding="10,5" Margin="0,0,0,10" Width="100"/>
 
         <!-- Habits List -->
         <ListView Grid.Row="2" x:Name="HabitsListView">
             <ListView.ItemTemplate>
                 <DataTemplate>
-                    <Grid>
+                    <Grid Margin="0,5">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding Title}" Margin="0,0,10,0"/>
-                        <TextBlock Grid.Column="1" Text="{Binding FolderPath}"/>
+                        <TextBlock Grid.Column="0" Text="{Binding Title}" FontWeight="Bold" Margin="0,0,10,0" Width="150"/>
+                        <TextBlock Grid.Column="1" Text="{Binding FolderPath}" TextTrimming="CharacterEllipsis" ToolTip="{Binding FolderPath}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding CreatedAt, StringFormat='Added: {0:d}'}" Foreground="Gray" Margin="10,0,0,0"/>
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>
