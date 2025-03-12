@@ -4,7 +4,10 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
+using Microsoft.Win32;
 
 namespace FolderHabits
 {
@@ -13,6 +16,8 @@ namespace FolderHabits
         private ObservableCollection<Habit> _habits = new ObservableCollection<Habit>();
         private const string SaveFileName = "habits.json";
         private DispatcherTimer _refreshTimer;
+        private Habit _currentHabit;
+        private DateTime _selectedDate;
 
         public MainWindow()
         {
@@ -23,10 +28,13 @@ namespace FolderHabits
 
             _refreshTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(30)
+                Interval = TimeSpan.FromMinutes(1)
             };
             _refreshTimer.Tick += RefreshTimer_Tick;
             _refreshTimer.Start();
+            
+            ChangesTitle.Text = "No day selected";
+            ChangesListBox.ItemsSource = new List<string> { "Click on a day to view changes" };
         }
 
         private void RefreshTimer_Tick(object sender, EventArgs e)
@@ -42,29 +50,38 @@ namespace FolderHabits
             }
 
             HabitsListView.Items.Refresh();
+
+            if (_currentHabit != null)
+            {
+                ShowChangesForDate(_currentHabit, _selectedDate);
+            }
         }
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
             string title = TitleTextBox.Text.Trim();
             string folderPath = FolderTextBox.Text.Trim();
+            bool monitorSubdirectories = SubdirectoriesCheckBox.IsChecked ?? true;
 
             if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(folderPath))
             {
-                System.Windows.MessageBox.Show("Please enter both a title and folder path.");
+                MessageBox.Show("Please enter both a title and folder path.", "Missing Information",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (!Directory.Exists(folderPath))
             {
-                System.Windows.MessageBox.Show("The specified folder does not exist.");
+                MessageBox.Show("The specified folder does not exist.", "Invalid Folder",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             var habit = new Habit
             {
                 Title = title,
-                FolderPath = folderPath
+                FolderPath = folderPath,
+                MonitorSubdirectories = monitorSubdirectories
             };
 
             habit.UpdateCounts();
@@ -72,24 +89,22 @@ namespace FolderHabits
 
             TitleTextBox.Text = string.Empty;
             FolderTextBox.Text = string.Empty;
+            SubdirectoriesCheckBox.IsChecked = true;
 
             SaveHabits();
         }
 
         private void BrowseButton_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new Microsoft.Win32.OpenFileDialog
+            var dialog = new OpenFolderDialog
             {
-                Title = "Select Folder to Monitor",
-                CheckFileExists = false,
-                FileName = "Select Folder",
-                CheckPathExists = true
+                Title = "Select Folder to Monitor"
             };
 
             bool? result = dialog.ShowDialog();
             if (result == true)
             {
-                string folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
+                string folderPath = dialog.FolderName;
                 if (!string.IsNullOrEmpty(folderPath))
                 {
                     FolderTextBox.Text = folderPath;
@@ -99,9 +114,9 @@ namespace FolderHabits
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is System.Windows.Controls.Button button && button.Tag is Habit habit)
+            if (sender is Button button && button.Tag is Habit habit)
             {
-                if (System.Windows.MessageBox.Show(
+                if (MessageBox.Show(
                     $"Are you sure you want to delete '{habit.Title}'?",
                     "Confirm Delete",
                     MessageBoxButton.YesNo,
@@ -109,7 +124,65 @@ namespace FolderHabits
                 {
                     _habits.Remove(habit);
                     SaveHabits();
+                    
+                    if (habit == _currentHabit)
+                    {
+                        _currentHabit = null;
+                        ChangesTitle.Text = "No day selected";
+                        ChangesListBox.ItemsSource = new List<string> { "Click on a day to view changes" };
+                    }
                 }
+            }
+        }
+
+        private void ActivityDay_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is Border border && border.Tag is DateTime date && border.DataContext is ActivityDay activityDay)
+            {                
+                foreach (var habit in _habits)
+                {
+                    if (habit.ActivityDays.Contains(activityDay))
+                    {
+                        _currentHabit = habit;
+                        _selectedDate = date;
+                        ShowChangesForDate(habit, date);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void ShowChangesForDate(Habit habit, DateTime date)
+        {
+            var changes = habit.GetChangedFilesForDate(date);
+
+            if (changes.Count > 0)
+            {
+                ChangesTitle.Text = $"Changes for {habit.Title} on {date:dd MMM yyyy}";
+                
+                var formattedChanges = new List<string>();
+                foreach (var path in changes)
+                {
+                    string displayPath = path;
+
+                    if (path.StartsWith(habit.FolderPath))
+                    {
+                        displayPath = path.Substring(habit.FolderPath.Length).TrimStart('\\', '/');
+                        if (string.IsNullOrEmpty(displayPath))
+                        {
+                            displayPath = "(Root folder)";
+                        }
+                    }
+
+                    formattedChanges.Add(displayPath);
+                }
+
+                ChangesListBox.ItemsSource = formattedChanges;
+            }
+            else
+            {
+                ChangesTitle.Text = $"No changes for {habit.Title} on {date:dd MMM yyyy}";
+                ChangesListBox.ItemsSource = new List<string> { "No files were modified on this day" };
             }
         }
 
@@ -122,7 +195,7 @@ namespace FolderHabits
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Failed to save habits: {ex.Message}");
+                MessageBox.Show($"Failed to save habits: {ex.Message}");
             }
         }
 
@@ -147,13 +220,40 @@ namespace FolderHabits
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Failed to load habits: {ex.Message}");
+                MessageBox.Show($"Failed to load habits: {ex.Message}");
             }
         }
 
         private void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
             RefreshAllCounts();
+        }
+    }
+    
+    public class OpenFolderDialog
+    {
+        public string Title { get; set; }
+        public string FolderName { get; private set; }
+
+        public bool? ShowDialog()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = this.Title,
+                CheckFileExists = false,
+                FileName = "Select Folder",
+                CheckPathExists = true,
+                ValidateNames = false
+            };
+
+            bool? result = dialog.ShowDialog();
+            if (result == true)
+            {
+                FolderName = Path.GetDirectoryName(dialog.FileName);
+                return true;
+            }
+
+            return false;
         }
     }
 }

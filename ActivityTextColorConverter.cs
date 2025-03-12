@@ -5,18 +5,18 @@ using System.Windows.Media;
 
 namespace FolderHabits
 {
-    public class ActivityColorConverter : IValueConverter
+    public class ActivityTextColorConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (value is bool hasActivity)
             {
                 return hasActivity
-                    ? new SolidColorBrush(Color.FromRgb(57, 211, 83))
-                    : new SolidColorBrush(Color.FromRgb(235, 237, 240));
+                    ? new SolidColorBrush(Colors.White)
+                    : new SolidColorBrush(Color.FromRgb(85, 85, 85));
             }
 
-            return new SolidColorBrush(Color.FromRgb(235, 237, 240));
+            return new SolidColorBrush(Color.FromRgb(85, 85, 85));
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
